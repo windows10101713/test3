@@ -1,0 +1,407 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Life Plan Scheduler AI</title>
+    <style>
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      body {
+        font-family: "Segoe UI", Arial, sans-serif;
+        background: radial-gradient(circle at 20% 20%, #e8efff 0%, #f7f9ff 45%, #f4f7fb 100%);
+        color: #1c2434;
+        min-height: 100vh;
+      }
+      .app {
+        max-width: 980px;
+        margin: 0 auto;
+        padding: 20px;
+      }
+      .hero {
+        background: linear-gradient(140deg, #2b66f6 0%, #1f50c9 45%, #12378f 100%);
+        color: #fff;
+        border-radius: 16px;
+        padding: 24px;
+        margin-bottom: 16px;
+        box-shadow: 0 10px 28px rgba(25, 63, 150, 0.28);
+      }
+      .hero h1 { font-size: 28px; margin-bottom: 8px; }
+      .hero p { opacity: 0.95; line-height: 1.5; }
+      .status-row {
+        margin-top: 12px;
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+      .pill {
+        display: inline-block;
+        border-radius: 999px;
+        padding: 7px 12px;
+        font-size: 12px;
+        font-weight: 700;
+        background: rgba(255, 255, 255, 0.2);
+      }
+      .layout {
+        display: grid;
+        grid-template-columns: 1fr 260px;
+        gap: 16px;
+      }
+      .panel {
+        background: #fff;
+        border-radius: 14px;
+        padding: 16px;
+        box-shadow: 0 4px 14px rgba(24, 47, 92, 0.08);
+      }
+      .quick-actions {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        margin-bottom: 14px;
+      }
+      .quick-actions button {
+        border: 1px solid #d4def5;
+        background: #f3f7ff;
+        color: #234ea8;
+        border-radius: 999px;
+        padding: 8px 12px;
+        cursor: pointer;
+        font-size: 12px;
+        font-weight: 700;
+      }
+      .chat {
+        height: 470px;
+        overflow-y: auto;
+        border: 1px solid #e5ecfb;
+        border-radius: 12px;
+        padding: 12px;
+        background: #fbfdff;
+      }
+      .msg {
+        max-width: 84%;
+        margin: 10px 0;
+        padding: 10px 12px;
+        border-radius: 12px;
+        line-height: 1.45;
+        white-space: pre-wrap;
+      }
+      .msg.user {
+        margin-left: auto;
+        background: #2b66f6;
+        color: #fff;
+      }
+      .msg.ai {
+        margin-right: auto;
+        background: #e8f0ff;
+        color: #1f2d4a;
+      }
+      .role {
+        font-size: 11px;
+        font-weight: 700;
+        opacity: 0.75;
+        margin-bottom: 4px;
+      }
+      .input-row {
+        margin-top: 12px;
+        display: flex;
+        gap: 8px;
+      }
+      .input-row textarea {
+        flex: 1;
+        resize: none;
+        border: 1px solid #d8e2fa;
+        border-radius: 10px;
+        padding: 10px 12px;
+        min-height: 52px;
+        font-size: 14px;
+      }
+      .input-row button {
+        border: 0;
+        background: #1f50c9;
+        color: #fff;
+        border-radius: 10px;
+        padding: 0 18px;
+        font-weight: 700;
+        cursor: pointer;
+      }
+      .sidebar h3 {
+        font-size: 13px;
+        margin-bottom: 8px;
+        color: #2d416e;
+      }
+      .card {
+        background: #f7faff;
+        border: 1px solid #e5ecfb;
+        border-radius: 10px;
+        padding: 10px;
+        margin-bottom: 10px;
+      }
+      .big { font-size: 26px; font-weight: 800; color: #1f50c9; }
+      .small { font-size: 11px; color: #66789f; margin-top: 4px; }
+      .list-item {
+        font-size: 12px;
+        border-left: 3px solid #2b66f6;
+        background: #fff;
+        padding: 8px;
+        border-radius: 6px;
+        margin-bottom: 6px;
+      }
+      @media (max-width: 900px) {
+        .layout { grid-template-columns: 1fr; }
+        .chat { height: 380px; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app">
+      <header class="hero">
+        <h1>Life Plan Scheduler AI</h1>
+        <p>설정 화면 없이 바로 쓰는 Azure OpenAI 기반 일정/메모 AI입니다. 입력 후 전송하면 즉시 AI가 정리합니다.</p>
+        <div class="status-row">
+          <span class="pill" id="ai-status">Azure 연결 확인 중...</span>
+          <span class="pill" id="usage-status">오늘 대화 0회</span>
+        </div>
+      </header>
+
+      <main class="layout">
+        <section class="panel">
+          <div class="quick-actions">
+            <button onclick="quickSend('내일 오후 3시 팀 회의 추가해줘')">회의 추가</button>
+            <button onclick="quickSend('오늘 해야 할 일 우선순위 정리해줘')">우선순위 정리</button>
+            <button onclick="quickSend('약 복용과 운동 루틴 리마인드 해줘')">건강 루틴</button>
+            <button onclick="quickSend('이번 주 공부 계획 세워줘')">공부 계획</button>
+            <button onclick="clearAll()">초기화</button>
+          </div>
+
+          <div class="chat" id="chat"></div>
+
+          <div class="input-row">
+            <textarea id="input" placeholder="예: 내일 오전 10시에 병원 예약 잡고 준비 시간도 포함해줘"></textarea>
+            <button id="send">전송</button>
+          </div>
+        </section>
+
+        <aside class="panel sidebar">
+          <div class="card">
+            <div class="big" id="count-msg">0</div>
+            <div class="small">총 메시지</div>
+          </div>
+          <div class="card">
+            <div class="big" id="count-item">0</div>
+            <div class="small">추출된 일정/메모</div>
+          </div>
+
+          <h3>최근 추출 항목</h3>
+          <div id="items"></div>
+        </aside>
+      </main>
+    </div>
+
+    <script>
+      const STORAGE_KEY = "lps-azure-main-v1";
+      const ENDPOINT = "http://localhost:8787/api/llm/chat";
+      const MODEL = "gpt-4o-mini";
+
+      const state = loadState();
+      const el = {
+        chat: document.getElementById("chat"),
+        input: document.getElementById("input"),
+        send: document.getElementById("send"),
+        aiStatus: document.getElementById("ai-status"),
+        usageStatus: document.getElementById("usage-status"),
+        countMsg: document.getElementById("count-msg"),
+        countItem: document.getElementById("count-item"),
+        items: document.getElementById("items"),
+      };
+
+      init();
+
+      async function init() {
+        if (!state.messages.length) {
+          pushMessage("ai", "안녕하세요. 저는 Azure OpenAI 기반 생활 계획 AI입니다.\n일정, 메모, 루틴을 바로 입력해 주세요.");
+        }
+        render();
+        await checkAzureHealth();
+        bindEvents();
+      }
+
+      function bindEvents() {
+        el.send.addEventListener("click", send);
+        el.input.addEventListener("keydown", (e) => {
+          if (e.key === "Enter" && !e.shiftKey) {
+            e.preventDefault();
+            send();
+          }
+        });
+      }
+
+      async function checkAzureHealth() {
+        try {
+          const res = await fetch("http://localhost:8787/health");
+          const data = await res.json();
+          if (data?.providers?.azure?.configured) {
+            el.aiStatus.textContent = "Azure OpenAI 연결됨";
+          } else {
+            el.aiStatus.textContent = "Azure 키/엔드포인트 미설정";
+          }
+        } catch (_error) {
+          el.aiStatus.textContent = "프록시 연결 실패";
+        }
+      }
+
+      async function send() {
+        const text = el.input.value.trim();
+        if (!text) return;
+
+        pushMessage("user", text);
+        el.input.value = "";
+        render();
+
+        const loadingId = `loading-${Date.now()}`;
+        state.messages.push({ id: loadingId, role: "ai", text: "생각 중..." });
+        render();
+
+        try {
+          const aiText = await askAzure(text);
+          replaceLoading(loadingId, aiText);
+          extractItem(text);
+        } catch (error) {
+          replaceLoading(loadingId, "Azure 응답 실패: 설정을 확인해 주세요.\n\n" + fallback(text));
+          extractItem(text);
+        }
+
+        state.usage += 1;
+        persist();
+        render();
+      }
+
+      async function askAzure(userText) {
+        const recent = state.messages.slice(-10).map((m) => ({
+          role: m.role === "ai" ? "assistant" : "user",
+          content: m.text,
+        }));
+
+        const payload = {
+          provider: "azure",
+          model: MODEL,
+          messages: [
+            {
+              role: "system",
+              content: "당신은 한국어 일정/메모 코치다. 답변은 간결하고 실행 가능한 체크리스트 중심으로 작성한다.",
+            },
+            ...recent,
+            { role: "user", content: userText },
+          ],
+          temperature: 0.3,
+          max_tokens: 700,
+        };
+
+        const res = await fetch(ENDPOINT, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+
+        if (!res.ok) {
+          const text = await res.text();
+          throw new Error(text || "request failed");
+        }
+
+        const data = await res.json();
+        return String(data?.content || "응답이 비어 있습니다.");
+      }
+
+      function fallback(text) {
+        const q = text.toLowerCase();
+        if (q.includes("회의") || q.includes("약속") || q.includes("시")) {
+          return "일정으로 인식했어요.\n- 시간 확정\n- 준비물 3개\n- 이동시간 확보";
+        }
+        if (q.includes("운동") || q.includes("약")) {
+          return "건강 루틴으로 기록했어요.\n- 알람 설정\n- 완료 체크\n- 주간 점검";
+        }
+        return "요청을 기록했어요.\n- 오늘 할 일 3개로 분해\n- 우선순위 지정\n- 30분 단위로 실행";
+      }
+
+      function extractItem(text) {
+        const q = text.toLowerCase();
+        if (q.includes("회의") || q.includes("약속") || q.includes("시") || q.includes("메모") || q.includes("운동") || q.includes("약")) {
+          state.items.unshift({ text, at: new Date().toISOString() });
+          state.items = state.items.slice(0, 8);
+        }
+      }
+
+      function pushMessage(role, text) {
+        state.messages.push({ id: `${Date.now()}-${Math.random()}`, role, text });
+        state.messages = state.messages.slice(-60);
+        persist();
+      }
+
+      function replaceLoading(id, text) {
+        const idx = state.messages.findIndex((m) => m.id === id);
+        if (idx >= 0) state.messages[idx].text = text;
+      }
+
+      function render() {
+        el.chat.innerHTML = "";
+        state.messages.forEach((m) => {
+          const node = document.createElement("div");
+          node.className = `msg ${m.role}`;
+          node.innerHTML = `<div class="role">${m.role === "ai" ? "AI" : "사용자"}</div><div>${escapeHtml(m.text).replace(/\n/g, "<br>")}</div>`;
+          el.chat.appendChild(node);
+        });
+        el.chat.scrollTop = el.chat.scrollHeight;
+
+        el.countMsg.textContent = String(state.messages.length);
+        el.countItem.textContent = String(state.items.length);
+        el.usageStatus.textContent = `오늘 대화 ${state.usage}회`;
+
+        el.items.innerHTML = state.items.length
+          ? state.items
+              .map((i) => `<div class="list-item">${escapeHtml(i.text)}</div>`)
+              .join("")
+          : "<div class=\"small\">아직 추출된 항목이 없습니다.</div>";
+      }
+
+      function clearAll() {
+        state.messages = [];
+        state.items = [];
+        state.usage = 0;
+        pushMessage("ai", "초기화 완료. 새 계획을 입력해 주세요.");
+        persist();
+        render();
+      }
+
+      function loadState() {
+        try {
+          const raw = localStorage.getItem(STORAGE_KEY);
+          if (!raw) return { messages: [], items: [], usage: 0 };
+          const parsed = JSON.parse(raw);
+          return {
+            messages: Array.isArray(parsed.messages) ? parsed.messages : [],
+            items: Array.isArray(parsed.items) ? parsed.items : [],
+            usage: Number.isFinite(parsed.usage) ? parsed.usage : 0,
+          };
+        } catch (_error) {
+          return { messages: [], items: [], usage: 0 };
+        }
+      }
+
+      function persist() {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      }
+
+      function quickSend(text) {
+        el.input.value = text;
+        send();
+      }
+
+      function escapeHtml(value) {
+        return String(value)
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/\"/g, "&quot;")
+          .replace(/'/g, "&#39;");
+      }
+    </script>
+  </body>
+</html>
